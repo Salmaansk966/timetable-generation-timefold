@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: problem-solver
+  datasource:
+    url: jdbc:mysql://localhost:3306/sbioa_dev
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true

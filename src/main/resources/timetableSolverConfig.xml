@@ -1,0 +1,14 @@
+<solver>
+    <solutionClass>com.timetable.problem_solver.model.TimeFoldTimetable</solutionClass>
+    <entityClass>com.timetable.problem_solver.model.TimeFoldLesson</entityClass>
+
+    <scoreDirectorFactory>
+        <constraintProviderClass>
+            com.timetable.problem_solver.constraints.TimeTableConstraintProvider
+        </constraintProviderClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <secondsSpentLimt>30</secondsSpentLimt>
+    </termination>
+</solver>
