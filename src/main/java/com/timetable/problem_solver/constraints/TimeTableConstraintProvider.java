@@ -62,6 +62,18 @@ public class TimeTableConstraintProvider implements ConstraintProvider, Applicat
         if (applicationContext != null) {
             return applicationContext.getBean(ConstraintSettingsRepository.class);
         }
+        
+        throw new IllegalStateException("Cannot access ConstraintSettingsRepository - Spring context not available");
+    }
+    
+    /**
+     * Static method to get repository from Spring context
+     * This is used as a fallback when the instance doesn't have proper injection
+     */
+    private static ConstraintSettingsRepository getRepositoryFromContext() {
+        if (applicationContext != null) {
+            return applicationContext.getBean(ConstraintSettingsRepository.class);
+        }
         throw new IllegalStateException("Cannot access ConstraintSettingsRepository - Spring context not available");
     }
 
@@ -72,15 +84,26 @@ public class TimeTableConstraintProvider implements ConstraintProvider, Applicat
         // Load constraint settings from database dynamically
         Map<String, ConstraintSettings> constraintSettingsMap = loadConstraintSettings();
 
+        System.out.println("=== DEFINING CONSTRAINTS ===");
+        System.out.println("Processing " + constraintSettingsMap.size() + " constraints from database");
+
         // Process all constraints from database (both predefined and custom)
         for (ConstraintSettings settings : constraintSettingsMap.values()) {
             if (settings.isEnableFlag()) {
+                System.out.println("  ✓ Adding enabled constraint: " + settings.getConstraintName());
                 Constraint constraint = createConstraintByName(factory, settings);
                 if (constraint != null) {
                     constraintList.add(constraint);
+                } else {
+                    System.out.println("  ✗ Failed to create constraint: " + settings.getConstraintName());
                 }
+            } else {
+                System.out.println("  - Skipping disabled constraint: " + settings.getConstraintName());
             }
         }
+
+        System.out.println("Total active constraints: " + constraintList.size());
+        System.out.println("=== END DEFINING CONSTRAINTS ===");
 
         return constraintList.toArray(new Constraint[0]);
     }
@@ -151,11 +174,36 @@ public class TimeTableConstraintProvider implements ConstraintProvider, Applicat
      * Load all constraint settings from database and create a map for quick lookup
      */
     private Map<String, ConstraintSettings> loadConstraintSettings() {
-        return getRepository().findAll().stream()
-                .collect(Collectors.toMap(
-                        ConstraintSettings::getConstraintName,
-                        settings -> settings
-                ));
+        try {
+            ConstraintSettingsRepository repository;
+            try {
+                repository = getRepository();
+            } catch (IllegalStateException e) {
+                // Fallback to static context access
+                System.out.println("Falling back to static context access for repository");
+                repository = getRepositoryFromContext();
+            }
+            
+            List<ConstraintSettings> allSettings = repository.findAll();
+            
+            System.out.println("=== CONSTRAINT LOADING DEBUG ===");
+            System.out.println("Total constraints loaded from database: " + allSettings.size());
+            allSettings.forEach(settings -> 
+                System.out.println("  - " + settings.getConstraintName() + 
+                    " (enabled: " + settings.isEnableFlag() + 
+                    ", weight: " + settings.getConstraintWeight() + ")"));
+            System.out.println("=== END CONSTRAINT LOADING DEBUG ===");
+            
+            return allSettings.stream()
+                    .collect(Collectors.toMap(
+                            ConstraintSettings::getConstraintName,
+                            settings -> settings
+                    ));
+        } catch (Exception e) {
+            System.err.println("ERROR loading constraint settings: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to load constraint settings from database", e);
+        }
     }
 
     /**

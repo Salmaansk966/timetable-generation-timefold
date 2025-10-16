@@ -1,19 +1,21 @@
 package com.timetable.problem_solver.service;
 
-import ai.timefold.solver.core.api.solver.SolverFactory;
-import ai.timefold.solver.core.api.solver.SolverManager;
-import ai.timefold.solver.core.config.solver.SolverConfig;
-import com.timetable.problem_solver.constraints.TimeTableConstraintProvider;
-import com.timetable.problem_solver.model.TimeFoldLesson;
-import com.timetable.problem_solver.model.TimeFoldTimetable;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.timetable.problem_solver.constraints.TimeTableConstraintProvider;
+import com.timetable.problem_solver.model.TimeFoldLesson;
+import com.timetable.problem_solver.model.TimeFoldTimetable;
+
+import ai.timefold.solver.core.api.solver.SolverFactory;
+import ai.timefold.solver.core.api.solver.SolverManager;
+import ai.timefold.solver.core.config.solver.SolverConfig;
 import jakarta.annotation.PreDestroy;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Service that manages dynamic SolverManager creation and reloading.
@@ -73,6 +75,7 @@ public class SolverService {
      * Reload the solver configuration with fresh constraint settings from database.
      * This method creates a new SolverManager and SolverFactory with the latest
      * constraint configuration, ensuring that constraint changes take effect immediately.
+     * Uses the Spring-managed constraint provider instance to ensure proper repository access.
      */
     public void reloadSolver() {
         lock.writeLock().lock();
