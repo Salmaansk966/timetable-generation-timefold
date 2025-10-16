@@ -9,6 +9,10 @@ import ai.timefold.solver.core.api.solver.SolverStatus;
 import com.timetable.problem_solver.controller.exception.TimetableSolverException;
 import com.timetable.problem_solver.model.*;
 import com.timetable.problem_solver.repository.*;
+import com.timetable.problem_solver.service.SolverService;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,8 +29,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/timetable")
 public class TimetableController {
 
-    public TimetableController(SolverManager<TimeFoldTimetable, String> solverManager, SolutionManager<TimeFoldTimetable, HardSoftScore> solutionManager, PeriodTimingsRepository timeSlotRepository, SubjectRepository subjectRepository, StaffRepository teacherRepository, StaffWorkRepository staffWorkRepository, SectionRepository groupRepository, SchoolTimingRepository schoolTimingRepository, SectionSubjectMappingRepository sectionSubjectMappingRepository) {
-        this.solverManager = solverManager;
+    private static final Logger logger = LoggerFactory.getLogger(TimetableController.class);
+
+    public TimetableController(SolverService solverService, SolutionManager<TimeFoldTimetable, HardSoftScore> solutionManager, PeriodTimingsRepository timeSlotRepository, SubjectRepository subjectRepository, StaffRepository teacherRepository, StaffWorkRepository staffWorkRepository, SectionRepository groupRepository, SchoolTimingRepository schoolTimingRepository, SectionSubjectMappingRepository sectionSubjectMappingRepository) {
+        this.solverService = solverService;
         this.solutionManager = solutionManager;
         this.timeSlotRepository = timeSlotRepository;
         this.subjectRepository = subjectRepository;
@@ -38,7 +44,7 @@ public class TimetableController {
     }
 
 //    private final TimetableService timetableService;
-    private final SolverManager<TimeFoldTimetable, String> solverManager;
+    private final SolverService solverService;
     private final SolutionManager<TimeFoldTimetable, HardSoftScore> solutionManager;
 
     private final PeriodTimingsRepository timeSlotRepository;
@@ -50,21 +56,36 @@ public class TimetableController {
     private final SectionSubjectMappingRepository sectionSubjectMappingRepository;
 
     // TODO: Without any "time to live", the map may eventually grow out of memory.
+    @Getter
     private final ConcurrentMap<String, Job> jobIdToJob = new ConcurrentHashMap<>();
-
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
     public String solve(@RequestBody TimeFoldTimetable problem) {
+        try {
 //        problem.fillFreePeriods();
-        String jobId = UUID.randomUUID().toString();
-        jobIdToJob.put(jobId, Job.ofTimetable(problem));
-        solverManager.solveBuilder()
-                .withProblemId(jobId)
-                .withProblemFinder(jobId_ -> jobIdToJob.get(jobId).timetable)
-                .withBestSolutionConsumer(solution -> jobIdToJob.put(jobId, Job.ofTimetable(solution)))
-                .withExceptionHandler((jobId_, exception) -> jobIdToJob.put(jobId, Job.ofException(exception)))
-                .run();
-        return jobId;
+            String jobId = UUID.randomUUID().toString();
+            jobIdToJob.put(jobId, Job.ofTimetable(problem));
+            
+            // Get the current solver manager (with latest constraint settings)
+            SolverManager<TimeFoldTimetable, String> solverManager = solverService.getSolverManager();
+            if (solverManager == null) {
+                throw new RuntimeException("Solver manager is not initialized. Please check the application logs.");
+            }
+            
+            solverManager.solveAndListen(jobId, problem, solution -> {
+                try {
+                    jobIdToJob.put(jobId, Job.ofTimetable(solution));
+                } catch (Exception e) {
+                    logger.error("Error updating solution for job {}: {}", jobId, e.getMessage(), e);
+                    jobIdToJob.put(jobId, Job.ofException(e));
+                }
+            });
+            
+            return jobId;
+        } catch (Exception e) {
+            logger.error("Failed to start solving: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to start solving: " + e.getMessage(), e);
+        }
     }
 
     @GetMapping
@@ -76,6 +97,7 @@ public class TimetableController {
     @GetMapping(value = "/{jobId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public TimeFoldTimetable getTimeTable(@PathVariable("jobId") String jobId) {
         TimeFoldTimetable timetable = getTimetableAndCheckForExceptions(jobId);
+        SolverManager<TimeFoldTimetable, String> solverManager = solverService.getSolverManager();
         SolverStatus solverStatus = solverManager.getSolverStatus(jobId);
         timetable.setSolverStatus(solverStatus);
         return timetable;
@@ -84,6 +106,7 @@ public class TimetableController {
     @GetMapping(value = "/{jobId}/status", produces = MediaType.APPLICATION_JSON_VALUE)
     public TimeFoldTimetable getStatus(@PathVariable("jobId") String jobId) {
         TimeFoldTimetable timetable = getTimetableAndCheckForExceptions(jobId);
+        SolverManager<TimeFoldTimetable, String> solverManager = solverService.getSolverManager();
         SolverStatus solverStatus = solverManager.getSolverStatus(jobId);
         return new TimeFoldTimetable(timetable.getScore());
     }
@@ -223,6 +246,7 @@ public class TimetableController {
     public TimeFoldTimetable terminateSolving(
             @PathVariable("jobId") String jobId) {
         // TODO: Replace with .terminateEarlyAndWait(... [, timeout]); see https://github.com/TimefoldAI/timefold-solver/issues/77
+        SolverManager<TimeFoldTimetable, String> solverManager = solverService.getSolverManager();
         solverManager.terminateEarly(jobId);
         return getTimeTable(jobId);
     }

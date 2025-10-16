@@ -17,6 +17,9 @@ $(document).ready(function () {
   $("#analyzeButton").click(function () {
     analyze();
   });
+  $("#navConstraints").click(function () {
+    loadConstraints();
+  });
 
   setupAjax();
   fetchDemoData();
@@ -47,6 +50,39 @@ function setupAjax() {
         success: callback
       });
     };
+  });
+}
+
+function loadConstraints() {
+  $.get("/api/constraint", function (data) {
+    const tableBody = $("#constraintTable tbody");
+    tableBody.empty();
+
+    data.forEach(constraint => {
+      console.log("check", constraint)
+      const row = $("<tr>");
+      row.append($("<td>").text(constraint.constraintName));
+      row.append($("<td>").text(constraint.description));
+      row.append($("<td>").text(constraint.constraintType))
+      const toggle = $("<input>", {
+        type: "checkbox",
+        checked: constraint.enableFlag,
+        change: function () {
+          $.ajax({
+            url: `/api/constraint/${constraint.id}/toggle`,
+            type: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify({ enabled: this.checked }),
+            success: () => console.log("Constraint updated:", constraint.constraintName),
+            error: (xhr) => alert("Failed to update constraint: " + xhr.responseText)
+          });
+        }
+      });
+      row.append($("<td class=\"text-center\">").append(toggle));
+      tableBody.append(row);
+    });
+  }).fail(() => {
+    alert("Failed to load constraint settings.");
   });
 }
 

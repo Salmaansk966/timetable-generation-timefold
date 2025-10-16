@@ -36,6 +36,11 @@
 
       <div class="float-end">
         <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item" id="navConstraintsItem">
+            <button class="nav-link" id="navConstraints" data-bs-toggle="pill" data-bs-target="#constraints" type="button">
+              Constraint Settings
+            </button>
+          </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link active" id="byTeacherTab" data-bs-toggle="tab" data-bs-target="#byTeacher"
                     type="button" role="tab" aria-controls="byTeacher" aria-selected="true">By teacher
@@ -59,6 +64,63 @@
       <div class="tab-pane fade" id="byStudentGroup" role="tabpanel" aria-labelledby="byStudentGroupTab">
         <table class="table table-borderless table-striped" id="timetableByStudentGroup">
           <!-- Filled in by app.js -->
+        </table>
+      </div>
+    </div>
+
+    <div id="constraints" class="tab-pane fade container mt-3">
+      <h2>Constraint Settings</h2>
+      <p class="text-muted">Configure which constraints should be active during timetable generation. Changes take effect immediately.</p>
+      
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-title">
+                <span class="badge bg-danger me-2">HARD</span>Hard Constraints
+              </h6>
+              <p class="card-text small text-muted">Must never be violated. These are fundamental scheduling rules.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-title">
+                <span class="badge bg-warning me-2">SEMI_HARD</span>Semi-Hard Constraints
+              </h6>
+              <p class="card-text small text-muted">Flexible rules that can be relaxed if needed for better solutions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-title">
+                <span class="badge bg-info me-2">SOFT</span>Soft Constraints
+              </h6>
+              <p class="card-text small text-muted">Optimization goals that improve the quality of the timetable.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="constraintTable">
+          <thead class="table-dark">
+          <tr>
+            <th style="width: 30%">Constraint Name</th>
+            <th style="width: 55%">Description</th>
+            <th style="width: 30%">Type</th>
+            <th style="width: 15%" class="text-center">Enabled</th>
+          </tr>
+          </thead>
+          <tbody>
+          <!-- Filled dynamically -->
+          </tbody>
         </table>
       </div>
     </div>

@@ -35,13 +35,22 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>ai.timefold.solver</groupId>
-			<artifactId>timefold-solver-spring-boot-starter</artifactId>
-			<version>1.26.1</version>  <!-- or some version you prefer -->
-		</dependency>
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/ai.timefold.solver/timefold-solver-spring-boot-starter -->
+		<dependency>
+			<groupId>ai.timefold.solver</groupId>
+			<artifactId>timefold-solver-spring-boot-starter</artifactId>
+			<version>1.26.2</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/ai.timefold.solver/timefold-solver-core -->
+		<dependency>
+			<groupId>ai.timefold.solver</groupId>
+			<artifactId>timefold-solver-core</artifactId>
+			<version>1.27.0</version>
 		</dependency>
 
 		<dependency>
@@ -129,7 +138,6 @@
 						<exclude>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<version>1.18.42</version>
 						</exclude>
 					</excludes>
 				</configuration>
